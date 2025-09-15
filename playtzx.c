@@ -28,6 +28,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <limits.h>
 #include "machines.h"
 
 #define MAJREV 1		/* Major revision of the format this program
@@ -103,8 +104,8 @@ char databyte;			/* Current Byte to be replayed of the data */
 signed short jump;		/* Relative Jump */
 int not_rec;			/* Some blocks were not recognised ?? */
 int files = 0;			/* Number of Files on the command line */
-char finp[255];			/* Input File  (First Command Line Option) */
-char fout[255];			/* Output File (Second Command Line Option or First with .VOC) */
+char finp[PATH_MAX];		/* Input File  (First Command Line Option) */
+char fout[PATH_MAX];		/* Output File (Second Command Line Option or First with .VOC) */
 char errstr[255];		/* Error String */
 int starting = 1;		/* starting block */
 int ending = 0;			/* ending block */
@@ -337,7 +338,7 @@ PauseSB(char amp, int tzx_pause)
 
   p = (int) ((((float) tzx_pause) * freq) / 1000.0);
 
-  PlaySB(amp, p);
+  PlaySB(127, p);
 
 }
 
@@ -356,6 +357,10 @@ InitVOC()
     Error("Not enough memory to set up .VOC file buffer!");
   }
   ofh = open(fout, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+  if (ofh == -1) {
+    free(mem);
+    Error("Can't open output file");
+  }
 
   write(ofh, vochead, 0x1A);
   if (freq <= 35000) {		/* Should we use more accurate format for
@@ -430,6 +435,10 @@ InitAU()
     Error("Not enough memory to set up .VOC file buffer!");
   }
   ofh = open(fout, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+  if (ofh == -1) {
+    free(mem);
+    Error("Can't open output file");
+  }
 
   write(ofh, &auhead, 0x1A);	/* this is propably rubbish now... :) */
 
@@ -1163,9 +1172,9 @@ main(int argc, char *argv[])
     freq = nfreq;
 
 /**/
-
+  printf("%s -> %s", finp, fout);
   if ((fh = open(finp, O_RDONLY)) == -1)
-    Error("File not found");
+    Error("Can't open input file");
 
   flen = FileLength(fh);
 
